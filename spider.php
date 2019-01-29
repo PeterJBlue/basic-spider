@@ -1,5 +1,4 @@
-
-<?php // spider.php - Very crude spider - Peter Blue 2019
+<?php // spider.php - Very crude spider - X05 - Peter Blue 2019
 
 /*
 This is VERY basic spider / web-crawler
@@ -27,17 +26,19 @@ Have fun !
 // X01 - Basic spider starting point from previous code. Just grab one domain and scan for links
 // X02 - Improve various functions
 // X03 - Add multiple passes
-// X04 - Obey robots.txt 
+// X04 - Obey robots.txt ... sort of
+// X05 - Minor fixes and improvements
 
-// General setings
-$AgentString = "UltraBasicBot";
-$CrawlDelay  = 1; // Seconds
-$PathToLinks = "captured-urls.txt"; // Output file, one URL per line.
+// General settings
+$AgentString  = "UltraBasicBot";
+$CrawlDelay   = 1;  // Seconds
+$CrawlTimeout = 10; // [X05] Timeout in seconds
+$PathToLinks  = "captured-urls.txt"; // Output file, one URL per line.
 
 
 
 // Change agent string to something a bit nicer and informative
-$options  = array('http' => array('user_agent' => $AgentString));
+$options  = array('http' => array('user_agent' => $AgentString, 'timeout' => $CrawlTimeout));
 $context  = stream_context_create($options); // This gets used by file_get_contents()
 
 // Get links saved from previous session
@@ -57,17 +58,18 @@ $PrevDomain   = ""; // Previous domain
 echo "Spider Version :  X04 - Basic Spider \n";
 echo "Agent String   :  $AgentString \n";
 echo "Crawl Delay    :  $CrawlDelay seconds\n";
+echo "Crawl Timeout  :  $CrawlTimeout seconds\n"; // [X05]
 
 $allow = true; // We're allowd to crawl this domain
 $flag  = 0;
 $lcnt  = count($LinkList);
 for ($l=0; $l<$lcnt; $l++)
   { // Scan all links in this array
-  $flag  = 1; // Not new domain
+  $flag  = 0; // [X05] Not new domain
   $link  = $LinkList[$l]; // Get current URL
   
   if ($ThisDomain == $PrevDomain)
-    { // Same domain as before
+    { // Same domain as before - sleep to save server stress
     sleep($CrawlDelay); // ToDo: Make random
     }
   else
@@ -84,7 +86,7 @@ for ($l=0; $l<$lcnt; $l++)
   if ($flag > 0)
     {
     $robfn = "$ThisDomain/robots.txt";
-    $robot = strtolower(file_get_contents($robfn));
+    $robot = strtolower(@file_get_contents($robfn));
     echo "Robots.txt     :  ".strlen($robot)." bytes -> $robfn \n";
     }
   
@@ -92,8 +94,8 @@ for ($l=0; $l<$lcnt; $l++)
   
   // Very crude robots parser
   $allow = true;
-  if ( stripos($robot,"user-agent: $AgentString\ndisallow: /") !== false ) { $allow = false; } // Disallow this agent
-  if ( stripos($robot,"user-agent: *\ndisallow: /") !== false ) { $allow = false; } // Disallow all agents
+  if ( stripos($robot,"user-agent: $AgentString\ndisallow: /\n") !== false ) { $allow = false; } // Disallow this agent
+  if ( stripos($robot,"user-agent: *\ndisallow: /\n") !== false ) { $allow = false; } // Disallow all agents
   
   if ($allow)
     {
@@ -123,6 +125,7 @@ for ($l=0; $l<$lcnt; $l++)
     }
   } // for l
 
+echo "Task complete.\nIf you run this again you will get more links.\n\n";
   
 // ---- Write out links to file -----------------------------------------------
 $data = "";
@@ -183,7 +186,7 @@ function ExtractLinks($body,$domain)
   }
 
 
-// Many links are relative, some are external so we re-form them to be uniform - makes searching for dups much easier
+// Many links are relative, some are external so we make them uniform - makes searching for dups much easier
 // Examples :-
 //   index.php
 //   /about-us
@@ -199,7 +202,7 @@ function NormaliseURL($url,$domain)
     $url = "$domain/$url"; // Re-form URL
     }
   
-  // Remove anchor
+  // Remove anchor - it's the same page
   $ptr1 = (int) strpos($url,"#");
   if ($ptr1 > 0) { $url = substr($url,0,$ptr1); }
   
@@ -296,5 +299,3 @@ function htmlExtractBetweenTags($data,$tag1,$tag2)
 // http://x.uk
 
 ?>
-
-
