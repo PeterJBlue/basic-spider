@@ -1,0 +1,22 @@
+
+This is VERY basic spider / web-crawler
+
+It runs with PHP5 (should work on PHP7) on Linux or FreeBSD. It might work on Windows but I haven't tested it.
+
+It crudely obeys the robots.txt file
+
+There is some sanity checking (on URLs & HTML) but not much.
+
+It requires no external dependencies and should run as-is. 
+
+To run / test :-
+
+1. Ensure you have PHP installed and ready to run.
+2. Go to the command line and navigate to where you have this project.
+3. Type: php spider.php
+4. It will display various details about the websites that it's downloading from.
+5. It will deposit all unique links (one per line) to file: captured-urls.txt
+6. Each time you run this it will discover more links.
+
+Have fun !
+
