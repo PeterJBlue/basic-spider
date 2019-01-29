@@ -12,7 +12,7 @@ There is some sanity checking (on URLs & HTML) but not much.
 To run / test :-
 
 1. Ensure you have PHP installed and ready to run.
-2. Go to the command line and nivigate to where you have this project.
+2. Go to the command line and navigate to where you have this project.
 3. Type: php spider.php
 4. It will display various details about the websites that it's downloading from.
 5. It will deposit all links (one per line) to file: captured-urls.txt
@@ -28,6 +28,7 @@ Have fun !
 // X03 - Add multiple passes
 // X04 - Obey robots.txt ... sort of
 // X05 - Minor fixes and improvements
+// X06 - More minor fixes and improvements
 
 // General settings
 $AgentString  = "UltraBasicBot";
@@ -60,6 +61,7 @@ echo "Agent String   :  $AgentString \n";
 echo "Crawl Delay    :  $CrawlDelay seconds\n";
 echo "Crawl Timeout  :  $CrawlTimeout seconds\n"; // [X05]
 
+$save  = 10; // When this gets to zero -> save link file
 $allow = true; // We're allowd to crawl this domain
 $flag  = 0;
 $lcnt  = count($LinkList);
@@ -73,7 +75,7 @@ for ($l=0; $l<$lcnt; $l++)
     sleep($CrawlDelay); // ToDo: Make random
     }
   else
-    { // New domain -> get robots.txt
+    { // New domain
     $PrevDomain = $ThisDomain;
     $flag = 1; // Indicate new domain
     }
@@ -84,21 +86,22 @@ for ($l=0; $l<$lcnt; $l++)
   else { $ThisDomain = $link; } // Copy as-is
   
   if ($flag > 0)
-    {
+    { // [X06] Get robots.txt
     $robfn = "$ThisDomain/robots.txt";
     $robot = strtolower(@file_get_contents($robfn));
     echo "Robots.txt     :  ".strlen($robot)." bytes -> $robfn \n";
     }
   
-  echo "Link URL       :  $link , Domain:($ThisDomain) \n";
+  echo "Link URL       :  $link \n";
+  echo "Domain         :  $ThisDomain \n";
   
   // Very crude robots parser
   $allow = true;
   if ( stripos($robot,"user-agent: $AgentString\ndisallow: /\n") !== false ) { $allow = false; } // Disallow this agent
-  if ( stripos($robot,"user-agent: *\ndisallow: /\n") !== false ) { $allow = false; } // Disallow all agents
+  if ( stripos($robot,"user-agent: *\ndisallow: /\n") !== false )            { $allow = false; } // Disallow all agents
   
   if ($allow)
-    {
+    { // We're allowed to crawl this domain
     $html = @file_get_contents($link,false,$context);
     $hlen = strlen($html);
     echo "Page size      :  $hlen bytes ";
@@ -107,11 +110,13 @@ for ($l=0; $l<$lcnt; $l++)
       echo "\n";
       
       list($err,$head,$body) = htmlGetHeaderAndBody($html); // Split HTML into Header and Body
-      
-      $new  = ExtractLinks($body,$ThisDomain);
-      $ncnt = count($new);
-      echo "Links added    :  $ncnt \n";
-      for ($i=0; $i<$ncnt; $i++) { echo "-> ".$new[$i]." \n"; } // Show links to user
+      if ($err == 0)
+        { // [X06] No problem splitting HTML
+        $new  = ExtractLinks($body,$ThisDomain);
+        $ncnt = count($new);
+        echo "Links added    :  $ncnt \n";
+        for ($i=0; $i<$ncnt; $i++) { echo "-> ".$new[$i]." \n"; } // Show links to user
+        }
       }
     else
       {
@@ -123,21 +128,40 @@ for ($l=0; $l<$lcnt; $l++)
     echo "Not allowed to crawl this domain !!\n";
     //sleep(2);
     }
+  
+  if ($save == 0)
+    { // This script could run for a long time so save link file at regular intervals
+    echo "Saving links ...";
+    SaveLinks();
+    echo "Done. \n";
+    $save = 100;
+    }
+  else
+    {
+    $save--;
+    }
   } // for l
+
+SaveLinks();
 
 echo "Task complete.\nIf you run this again you will get more links.\n\n";
   
 // ---- Write out links to file -----------------------------------------------
-$data = "";
-$lcnt = count($LinkList);
-for ($i=0; $i<$lcnt; $i++)
+
+function SaveLinks()
   {
-  $link = $LinkList[$i];
-  $data .= "$link\n";
+  global $PathToLinks,$LinkList;
+  
+  $data = "";
+  $lcnt = count($LinkList);
+  for ($i=0; $i<$lcnt; $i++)
+    {
+    $link = $LinkList[$i];
+    $data .= "$link\n";
+    }
+  
+  file_put_contents($PathToLinks,$data);
   }
-
-file_put_contents($PathToLinks,$data);
-
 
 
 
